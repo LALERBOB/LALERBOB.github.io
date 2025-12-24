@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>To ZJJ from WYC - Christmas Magic</title>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Noto+Sans+SC:wght@700&display=swap" rel="stylesheet">
+    <style>
+        /* === 样式区域 === */
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
+        
+        /* 标题 */
+        #title-container {
+            position: absolute; top: 5%; left: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50; pointer-events: none; opacity: 0; transition: opacity 1s ease;
+            text-align: center;
+        }
+
+        .title-line-1 {
+            font-family: 'Great Vibes', cursive;
+            font-size: 3.5rem;
+            background: linear-gradient(to bottom, #ffd700, #ffec8b);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(255,215,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .title-line-2 {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 1.5rem;
+            color: #ffaaaa;
+            text-shadow: 0 0 10px rgba(255, 100, 100, 0.5);
+            font-weight: normal; letter-spacing: 1px;
+        }
+
+        /* 启动屏 */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 200; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #fff;
+        }
+        
+        /* 加载进度文字 */
+        #loading-text {
+            font-family: 'Noto Sans SC', sans-serif;
+            color: #888;
+            margin-top: 20px;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        /* 开始按钮 (初始隐藏，等待加载) */
+        #btn-start {
+            padding: 15px 50px; font-size: 20px; background: linear-gradient(90deg, #ffd700, #ffaa00);
+            border: none; border-radius: 30px; color: #000; font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); margin-top: 30px; transition: transform 0.2s;
+            display: none; /* 默认不显示 */
+        }
+        #btn-start:hover { transform: scale(1.05); }
+
+        /* 2D 大图弹窗 */
+        #photo-modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+            max-width: 85%; max-height: 80%; 
+            background: #fff; padding: 10px 10px 40px 10px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8); z-index: 150;
+            opacity: 0; pointer-events: none; 
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 4px;
+        }
+        #photo-modal.active { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-2deg); pointer-events: auto; }
+        #photo-modal img { max-width: 100%; max-height: 60vh; display: block; object-fit: contain; }
+        #photo-caption { text-align: center; color: #333; font-family: 'Great Vibes', cursive; font-size: 2rem; margin-top: 5px; }
+
+        /* 视频预览小窗 */
+        #input_video {
+            position: absolute; bottom: 20px; left: 20px;
+            width: 160px; height: 120px; border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transform: scaleX(-1); z-index: 90; object-fit: cover;
+            transition: opacity 0.5s ease;
+        }
+        #input_video.hidden-cam { opacity: 0; pointer-events: none; }
+
+        /* 设置按钮 */
+        #toggle-btn {
+            position: absolute; top: 20px; right: 20px; width: 40px; height: 40px;
+            background: rgba(255,255,255,0.1); border-radius: 50%; color: #fff;
+            border: 1px solid rgba(255,255,255,0.2); cursor: pointer; z-index: 101;
+            display: flex; justify-content: center; align-items: center; font-size: 18px;
+        }
+
+        /* 控制面板 */
+        #ui-panel {
+            position: absolute; top: 70px; right: 20px; width: 280px;
+            max-height: 80vh; overflow-y: auto;
+            background: rgba(20, 20, 25, 0.85); backdrop-filter: blur(12px);
+            padding: 15px; border-radius: 12px; color: #fff;
+            border: 1px solid rgba(255,255,255,0.1); z-index: 100;
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            font-size: 13px;
+        }
+        #ui-panel.hidden { transform: translateX(130%); }
+
+        /* UI组件 */
+        .section-box { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .section-title { color: #ffd700; font-weight: bold; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .flex-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .btn { flex: 1; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: #ddd; cursor: pointer; border-radius: 4px; font-size: 12px; transition: 0.2s; text-align: center; }
+        .btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .btn-green { background: linear-gradient(135deg, #00b894, #00cec9); color: #000; font-weight: bold; border:none; }
+        input[type=range] { width: 100%; accent-color: #ffd700; cursor: pointer; height: 3px; }
+        
+        #btn-record.recording { background: #ff3333; animation: pulse 1.5s infinite; color: white; border: none; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 51, 51, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 51, 51, 0); } }
+
+        @media (max-width: 768px) {
+            .title-line-1 { font-size: 2.5rem; }
+            .title-line-2 { font-size: 1.1rem; }
+            #ui-panel { width: 85%; right: 7.5%; }
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <div id="title-container">
+        <div class="title-line-1">🎄 To ZJJ from WYC</div>
+        <div class="title-line-2">Merry Christmas, my baby. 💖</div>
+    </div>
+
+    <div id="start-screen">
+        <h1 style="font-family: 'Great Vibes'; font-size: 4rem; color: #ffd700; margin: 0; text-align: center;">Holiday Magic</h1>
+        <div style="margin-top:20px; text-align:center; color:#aaa; font-size:16px; line-height:1.8;">
+            🖐️ <strong>单手交互 (Right Hand)</strong><br>
+            🤟 <strong>伸展手掌</strong> ➔ 树上浮现回忆<br>
+            👌 <strong>捏合手指</strong> ➔ 查看清晰大图<br>
+            👆 <strong>手掌移动</strong> ➔ 旋转圣诞树
+        </div>
+        
+        <!-- 新增：加载进度 -->
+        <div id="loading-text">正在下载我们的回忆... 0%</div>
+        
+        <button id="btn-start">Open Gift 🎁</button>
+    </div>
+
+    <!-- 2D大图弹窗 -->
+    <div id="photo-modal">
+        <img id="modal-img" src="" alt="Memory">
+        <div id="photo-caption">Sweet Memory</div>
+    </div>
+
+    <button id="toggle-btn">⚙️</button>
+    <video id="input_video" class="hidden-cam" playsinline webkit-playsinline></video>
+
+    <div id="ui-panel" class="hidden">
+        <div class="section-box">
+            <div class="section-title">📷 操作提示</div>
+            <div style="font-size: 11px; color: #ccc; margin-top:5px;">
+                照片已从云端加载完毕。<br>
+                1. 🖐️ 张开手掌：照片在树上展开<br>
+                2. 👌 捏合手指：查看随机大图
+            </div>
+        </div>
+
+        <div class="section-box">
+            <div class="section-title">🎵 音乐与视频</div>
+            <div class="flex-row">
+                <button id="btn-play-pause" class="btn">⏸ 暂停</button>
+                <button class="btn" onclick="document.getElementById('music-input').click()">📂 换歌</button>
+                <input type="file" id="music-input" accept="audio/*" style="display:none;">
+            </div>
+            <button id="btn-record" class="btn" style="width:100%; margin-top:5px;">🔴 录制视频</button>
+        </div>
+
+        <div class="section-box">
+            <div class="section-title">⚙️ 设置</div>
+            <div class="flex-row">
+                <button id="btn-fullscreen" class="btn">⛶ 全屏</button>
+                <button id="btn-toggle-cam" class="btn">📹 摄像头</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                <span style="color:#aaa;">手势灵敏度</span>
+                <span id="val-sensitivity" style="color:#ffd700;">2.0</span>
+            </div>
+            <input type="range" id="param-sensitivity" min="0.5" max="10.0" step="0.5" value="2.0">
+        </div>
+    </div>
+
+    <!-- Shader 保持不变 -->
+    <script type="x-shader/x-vertex" id="vertexshader">
+        attribute float size; attribute vec3 customColor; attribute vec3 spherePos; attribute float type;     
+        varying vec3 vColor; varying float vType; varying vec3 vPos;
+        uniform float uTime; uniform float uExplosion; uniform float uBeat;      
+        void main() {
+            vColor = customColor; vType = type;
+            float t = uExplosion;
+            float ease = 1.0 - pow(1.0 - t, 3.0);
+            vec3 finalPos = mix(position, spherePos, ease);
+            vPos = finalPos;
+            float beatScale = 1.0;
+            if (t < 0.2) beatScale += uBeat * 0.15 * (1.0 - t*3.0); 
+            if (type > 0.5) beatScale += uBeat * 0.3; 
+            vec4 mvPosition = modelViewMatrix * vec4(finalPos * beatScale, 1.0);
+            float s = size; if(type > 0.5) s *= (1.0 + uBeat * 0.5);
+            gl_PointSize = s * (300.0 / -mvPosition.z);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="fragmentshader">
+        uniform float uTime; uniform float uBeat; uniform float uExplosion; uniform sampler2D uTexture;
+        varying vec3 vColor; varying float vType; varying vec3 vPos;
+        void main() {
+            float cols = 4.0; float rows = 4.0;
+            int typeIdx = int(vType);
+            float col = float(typeIdx - 4 * (typeIdx / 4)); 
+            float row = float(typeIdx / 4);
+            vec2 cellUV = gl_PointCoord; 
+            vec2 atlasUV = (cellUV + vec2(col, 3.0 - row)) / vec2(cols, rows);
+            vec4 texColor = texture2D(uTexture, atlasUV);
+            vec3 finalColor = vColor;
+            if(uExplosion > 0.1) {
+                vec3 rainbow = 0.5 + 0.5 * cos(uTime * 2.0 + vPos.xyx * 0.05 + vec3(0, 2, 4));
+                finalColor = mix(finalColor, rainbow, uExplosion * 0.8);
+            }
+            if (vType > 0.1) {
+                if (texColor.a < 0.5) discard; gl_FragColor = vec4(texColor.rgb * finalColor * 1.5, texColor.a);
+            } else {
+                if (texColor.a < 0.1) discard; float glow = texColor.r; gl_FragColor = vec4(finalColor, glow * 0.8);
+            }
+        }
+    </script>
+
+    <script>
+        // ======================================================================
+        // 👇👇👇 重点修改区域：请把照片的 URL 直链放在这里 👇👇👇
+        // 推荐使用图床 (如 sm.ms, postimages.org) 获取直链
+        // 链接必须以 http/https 开头，以 jpg/png 结尾
+        // ======================================================================
+        const photoURLs = [
+            // 示例图片链接 (您可以删除并替换成自己的)
+            "https://aisearch.cdn.bcebos.com/fileManager/VdArj-ejdLlVUnXIsGdRGgU5fQSIaLLmxD5-Dsj4dxc/1765720604835KFVn04.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/Pp6wT1m9hGcRtdL00XeK9haCW8EEDloA-qYoLICzvsc/1765720606220xrTpt7.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/y2dCPGjgA6-0wch87iTzGvcceAHgUjSCUwn27WnQQ88/1765720608199ixsBAd.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/gIQT-Frj_lFMUdfH1MGDtaMYn-ot8q2F-JMck0KZoLg/1765720610153vsjTmG.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/yfOzA1EO1icV8uqFMWQWknPYNPcHEcXLNKHKyhgH0YA/17657206118258W31yO.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/TMtQ-rqCvjrHS-rXe7L8rBbixAV5tSVlf-YxCa_CfF4/1765720613952FcbWBt.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/BLGG6IbRNTVRkoOXgQHNSYlAVaf7bzY4I1p9iWNCSbQ/17657206170519YCmhf.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/87i8lqF9mJlt1Ef9PvRvMZI-FbIqPFWuAuLiLDxiGZc/1765720629617eStiyl.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/NUPw9nPQC2P3L1lbB_uhM5vQpnK6E3b6SJAPjc5194s/1765720633995e4Uz3D.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/N2_mIfjfr8ff_5QmfSasga2aVdwZAwpkOoKo21PA8uw/1765720637418jEtIZA.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/xDEg81Aj1yNFMgcuAxHksdYoP7FXZcQwWIbGuKULUO8/1765720641481JakqeR.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/RRpUIvO0d_9QwoL-AGsbpMSSCgNjqzmBszNWmS2L8fk/1765720646227Van7mH.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/NfF87CnccR6e1kKYQzotCZmUEuipzvgCHW4AetAjMAY/1765720651843w2z63J.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/BlZhqMqPEyd_zaM1_Uoajr5sDSO80rnNimF8BX_vn8k/1765720653822AYHadg.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/xfPLzbGB4WBDEZXzlB56fD_bMjYTfoc7kU76yJW6MwI/1765720655939LvKq80.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/ch6vhru7GmDM1T6YP5uhhBbJGsV6jPBaxkdyj4_m1cM/1765720658969vyHmN4.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/HJkFOuEuesOAYDabd6blOnE128E-uwqOPHb6inIc7Gw/1765720663008niAD36.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/if5JWhPmSA-1bSE5UB1ybRpZq_LWPbzb40oljgJOvAo/1765720672856l7t2vO.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/ps5st1Y8Jt9LmrpFMYpHFiwmugPOigJp30nRHZnql7M/1765720677384u0bpWD.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/yBJQqMNS4Ua3NbPDyZI2O--XlvZU3XKtJH5aCr3cw6g/17657206818850ImAP9.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/Rn4pTX2_qE5Mzsy1CPUzPmazmtuG70Flma1LrJ9cUPU/17657206853542Zy87W.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/D261s_PigVRWWc_Mr8w0khTd5LiCy61OhNMznbtoDQQ/1765720690708Yx5q3l.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/AhP71_4_sSDTYLshj5u1C66xyv_2pvF9Z_hwUTYqavg/1765720694031RS8Bnl.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/kiOofdFA9DsQocABeWUP3TMNiA3Xr46jETI0NNIh4JU/1765720697174PvfqkO.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/qSKal-e9ZfvRQH0WgDCwa2dnwkqoMDq6XQ1o7nKyCrE/1765720699889GwsRXi.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/pBLKi8lbDmnOm067ti6Mr1Z7QShbHagIHY5Uvxo_o20/1765720713343DYmy4w.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/xwrVLqFeOzKOOrF5itlE1QPKpJDIVEEV2oURNntpwXE/1765720715412TFAleK.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/wmW4h9SL0MJeu1GA0-GOMQ5d7xnc6VD4JCD8nSMU7tQ/17657207174672PvCEn.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/JriHwWrcZIPj2QPT7vge-LFXO_XYSlvqflea-36kDJk/1765720720290C7QnUK.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/zDqOfEmbmMpjIol4U-VAzdD6KWv0GzSLDWB7seQJPpY/1765720723439MGsVa4.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/GT9ytuipZ9QEnoCu1JAp9u3oIf0SoeOsmzXwGQGJq3E/1765720726450ktm2WY.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/5vXrHmQIwPTUy0DqLuCpBWXPxOF6SujyUJjuREkoVwo/1765720730640mlUxME.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/Pn3UfnP3AX_2UGxiAwmTG-ZKmRWp-x7XxG_yMKSO8hA/1765720734077bALjpu.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/etZ0NjeMH4E_3CSjMZIluuwuHVrOugSW5k0PYrL3Fq8/1765720736378W7EyFw.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/hbpLgJ6QKdXDzIb_lf4InU5V0ZvvPdC7JHirAU6qVgs/1765720739070ZpebtQ.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/SU91gE50RL5osWivy9iCY4eKnMFOBt1KAhw5-bNKUWs/1765720743981NMzIhi.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/-oBczWW55s9P0CgVrFsSglVfI1wLEy5TJoz2bbFS10E/1765720747573G3hkjm.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/Pp6wT1m9hGcRtdL00XeK9haCW8EEDloA-qYoLICzvsc/1765720606220xrTpt7.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/y2dCPGjgA6-0wch87iTzGvcceAHgUjSCUwn27WnQQ88/1765720608199ixsBAd.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/etZ0NjeMH4E_3CSjMZIluuwuHVrOugSW5k0PYrL3Fq8/1765720736378W7EyFw.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/btkc88-I8FxXmRN5YQoAZIO3qU_MBjulmWBGQ1gpAIc/1766021829386QwEc6f.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/K58Tyz_lIklGmFDSTxd-qPKRjxPkn5A-xqDSUMdbgjg/1766021831416HywVZ6.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/qJ6JnOygoMlVCyV8g_ll2YCVVqDGZCf2WZSGMQFW22o/1766021833899IQiKBu.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/YteUt3Gaoun8OAg4d8dca9jBisY3C2kl210Y5Of7294/1766021835560RUjyzv.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/5J5eAke5S6g87Yq6LhTRWCaC9XzkoibO89r44mJAHJg/176602183738679HauM.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/UTL-35Udw42UM5R3qD0FPCgWDLXXmQmA_TqMZNvOD6A/1766021838800hQutCp.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/OGQtTcBmbBGfjFzFmQ8S5UZ4gWMl3jVTzPwHhmE_5DI/1766021840594wrlG2M.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/iuXT8MwdnYrAWSfxSX9z-dlWAyBFX1bEvCf-wUIgeyo/1766021842394bZI2BV.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/pcC_FxyNBw9Rb-xsUJRW5AJ_tMvqjTjxbinoLFuSi0c/1766021843722HYsJpD.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/q5ZNRCdin-0QOvjL6qGd96HKWu6h_wNVqGbA0bv4JBs/1766021844918Sctoyv.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/82IUWBWe7gR_RcYsPK17Zm0AwMF9hRbv4cWgvWkhhJI/1766021846261m1oLSQ.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/pApAAhD2VG2rmNNFwsr_oG_aGfMyjjDTaZ9FvnnDqDs/176602184756476IYcZ.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/lmkwBz0bOL4A5-asZXeFBKShSQYicNBJmwLv2sUCTA0/17660218490810fR9Wa.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/Yo0Od543gpuunXZv_VFiBFJwS_CQIcXMrgfuvzULtOQ/1766021850841WquaNk.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/tOyK1ufKek9kF2cFPSsfROfCJYr3mXwZVVIUaT2l4B0/1766021857266EGPRuA.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/Xae2T3OHbOBV-iYdQ-cQau64trEgvXRvGWu5mrRPDrc/1766021859006N2gquO.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/xDCUmdK-f6lXju1ryp0xNOHFepfg5HrELakAG92ON6w/1766021861233vrieIf.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/hbDBXeIwVyvjAc-YXTI65lB-wnky6wyXW-tcnxmLHww/1766021862452Zv4TtU.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/ORI5OJvf333ZAueGkZq6eS0oReU_Br_9Sscq20e1YVQ/1766021863945G0mWFP.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/Cpi4gz2Asf7bf53YaEdvFDZLbFElOf4vJW65xDLNFRc/1766021865345zY5ibw.jpg",
+            
+            "https://aisearch.cdn.bcebos.com/fileManager/GINS0NVAIM52zg0s_d_TrXsOq70fgY57F3naNRr8GD0/1766021866522lQUp0V.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/R5MFJqkiRJv0gR7V78EfRQMBXdn98RQ3hsDUNSHqnQg/1766021867845K2f3mo.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/WzMTZqJCTn6XaJojfYRWc1HhJlNaPanrQzPGQgqJ57o/1766021869046xeQoLS.jpg",
+
+            "https://aisearch.cdn.bcebos.com/fileManager/3qr1kA-ifCzXFSjpuq0XVkBBLfg4F3u0y3c1AE2agrM/1766021870285yxFapP.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/HC3iNQfhBpO9J5aFjPmrMR48EYlJHtXkwtWWQcWas6g/1766021871573nt384d.jpg",
+            "https://aisearch.cdn.bcebos.com/fileManager/_CDj18KxfBc4L84o1lC6YLIr541RVsRORNE2l73HjmY/1766021873177Fi5WzT.jpg",
+         
+        ];
+        // ======================================================================
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        const state = { 
+            explosion: 0.0, targetExplosion: 0.0, photoActive: false, 
+            enableGestureRot: true, lastHandPos: { x: null, y: null }, rotVelocity: { x: 0, y: 0 }, 
+            treeHeight: 80, rotationSpeed: 0.002, inertia: 0.95, gestureSensitivity: 3.0, explosionDecay: 0.06,
+            particleCount: isMobile ? 8000 : 20000, cameraZ: 90,
+            colors: { c1: new THREE.Color(0x228b22), c2: new THREE.Color(0xff0000), c3: new THREE.Color(0xffaa00) }
+        };
+
+        let scene, camera, renderer, clock;
+        let particleSystem, treeGroup, topDecoration;
+        let photoMeshes = [], loadedImages = [];
+        let audioCtx, analyser, dataArray, audioEl, audioStreamDest, mediaRecorder, recordedChunks = [];
+        let spriteTexture;
+
+        // 页面加载完成后立即开始下载图片
+        window.onload = function() {
+            startDownloadingImages();
+        };
+
+        function startDownloadingImages() {
+            if(photoURLs.length === 0) {
+                // 如果没有照片，直接允许开始
+                document.getElementById('loading-text').style.display = 'none';
+                document.getElementById('btn-start').style.display = 'block';
+                return;
+            }
+
+            let loadedCount = 0;
+            const total = photoURLs.length;
+            const loadingText = document.getElementById('loading-text');
+
+            photoURLs.forEach(url => {
+                const img = new Image();
+                img.crossOrigin = "anonymous"; // 允许跨域 (重要)
+                img.src = url;
+                
+                img.onload = () => {
+                    loadedImages.push(img);
+                    updateProgress();
+                };
+                
+                img.onerror = () => {
+                    console.error("Failed to load: " + url);
+                    // 即使失败也算作完成，防止卡死
+                    updateProgress();
+                };
+            });
+
+            function updateProgress() {
+                loadedCount++;
+                const percent = Math.floor((loadedCount / total) * 100);
+                loadingText.innerText = `正在下载我们的回忆... ${percent}%`;
+
+                if(loadedCount === total) {
+                    // 全部下载完成
+                    loadingText.innerText = "回忆加载完毕，准备就绪！";
+                    setTimeout(() => {
+                        loadingText.style.display = 'none';
+                        document.getElementById('btn-start').style.display = 'block';
+                        // 准备好 3D 材质
+                        updatePhotos(); 
+                    }, 500);
+                }
+            }
+        }
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            const screen = document.getElementById('start-screen');
+            screen.style.opacity = 0; setTimeout(() => screen.remove(), 1000);
+            document.getElementById('title-container').style.opacity = 1;
+            document.getElementById('input_video').classList.remove('hidden-cam');
+            
+            initAudio(); 
+            initThree(); 
+            setupUI(); 
+            startHandTracking();
+        });
+
+        function createSpriteTexture() {
+            const size = 512; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d'); const cols = 4; const rows = 4; const cellSize = size / cols;
+            ctx.clearRect(0,0,size,size);
+            
+            function drawCell(idx, drawFn) {
+                const c = idx % cols; const r = Math.floor(idx / cols);
+                const x = c * cellSize; const y = r * cellSize;
+                ctx.save(); ctx.translate(x + cellSize/2, y + cellSize/2); drawFn(ctx, cellSize/2 * 0.8); ctx.restore();
+            }
+            
+            drawCell(0, (ctx, r) => {
+                const grd = ctx.createRadialGradient(0,0,0, 0,0,r);
+                grd.addColorStop(0, "rgba(255,255,255,1)"); grd.addColorStop(0.5, "rgba(255,255,255,0.5)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+                ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+            });
+            const emojis = ['🎁', '🧦', '🔔', '👔', '🔺', '🧊', '🌲', '🎅'];
+            ctx.font = `${cellSize*0.7}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            emojis.forEach((emoji, i) => { drawCell(i + 1, (ctx, r) => { ctx.fillStyle = "#ffffff"; ctx.fillText(emoji, 0, 5); }); });
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function initAudio() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            audioEl = new Audio(); audioEl.crossOrigin = "anonymous"; audioEl.loop = true;
+            audioEl.src = "https://cdn.pixabay.com/download/audio/2023/11/26/audio_403332a9df.mp3";
+            analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            const source = audioCtx.createMediaElementSource(audioEl);
+            audioStreamDest = audioCtx.createMediaStreamDestination();
+            source.connect(analyser); analyser.connect(audioCtx.destination); source.connect(audioStreamDest);
+            audioEl.play().catch(e => console.log("Audio play failed initially"));
+        }
+
+        function initThree() {
+            clock = new THREE.Clock(); scene = new THREE.Scene(); 
+            scene.background = new THREE.Color(0x000000); scene.fog = new THREE.FogExp2(0x000000, 0.004);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 30, state.cameraZ); camera.lookAt(0, 30, 0);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+            treeGroup = new THREE.Group(); scene.add(treeGroup);
+            spriteTexture = createSpriteTexture();
+            createParticles(); createTopObject(); createSnow(); 
+            // 如果已经下载完图片，立即添加到场景
+            if(loadedImages.length > 0) updatePhotos();
+            window.addEventListener('resize', onWindowResize, false);
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function createParticles() {
+            const count = state.particleCount; const geo = new THREE.BufferGeometry();
+            const positions = [], spherePos = [], colors = [], sizes = [], types = [];
+            const h = state.treeHeight; 
+
+            const trunkCount = Math.floor(count * 0.1);
+            for(let i=0; i<trunkCount; i++) {
+                const t = i / trunkCount; const y = t * h - 10; const r = (1 - t) * 2.5 + 0.5; const a = Math.random() * Math.PI * 2; 
+                positions.push(Math.cos(a)*r, y, Math.sin(a)*r);
+                colors.push(0.36, 0.25, 0.2); sizes.push(2.0); types.push(0.0); 
+                const v = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize().multiplyScalar(50);
+                spherePos.push(v.x, v.y + 20, v.z);
+            }
+
+            const leafCount = count - trunkCount; const layers = 20; 
+            for(let i=0; i<leafCount; i++) {
+                const layerId = Math.floor(Math.random() * layers); const layerProgress = layerId / layers; 
+                const layerY = layerProgress * h - 10; const maxBranchLen = (1 - layerProgress) * (h * 0.5);
+                const branchesInLayer = 5 + Math.floor(Math.random()*3); const branchIdx = Math.floor(Math.random() * branchesInLayer);
+                const angleBase = (branchIdx / branchesInLayer) * Math.PI * 2 + (layerId * 0.5);
+                const dist = Math.random() * maxBranchLen; const spread = dist * 0.3; 
+                const x = Math.cos(angleBase) * dist + (Math.random()-0.5)*spread;
+                const z = Math.sin(angleBase) * dist + (Math.random()-0.5)*spread;
+                const gravity = (dist / maxBranchLen) * 8; const y = layerY - gravity + (Math.random()-0.5)*2;
+
+                positions.push(x, y, z);
+                const rnd = Math.random();
+                let type = 0.0; let size = 1.5; let col = state.colors.c1;
+                if (dist > maxBranchLen * 0.6) { 
+                    if (rnd > 0.95) { type = Math.floor(Math.random() * 8) + 1; size = 5.0 + Math.random() * 2.0; col = new THREE.Color(1,1,1); } 
+                    else if (rnd > 0.85) { type = 0.0; size = 3.0; col = Math.random() > 0.5 ? state.colors.c2 : state.colors.c3; }
+                }
+                colors.push(col.r, col.g, col.b); sizes.push(size); types.push(type);
+                const v = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize().multiplyScalar(40 + Math.random()*40);
+                spherePos.push(v.x, v.y + 20, v.z);
+            }
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geo.setAttribute('spherePos', new THREE.Float32BufferAttribute(spherePos, 3));
+            geo.setAttribute('customColor', new THREE.Float32BufferAttribute(colors, 3));
+            geo.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+            geo.setAttribute('type', new THREE.Float32BufferAttribute(types, 1));
+            state.uniforms = { uTime: { value: 0 }, uExplosion: { value: 0 }, uBeat: { value: 0 }, uTexture: { value: spriteTexture } };
+            const mat = new THREE.ShaderMaterial({ uniforms: state.uniforms, vertexShader: document.getElementById('vertexshader').textContent, fragmentShader: document.getElementById('fragmentshader').textContent, blending: THREE.AdditiveBlending, depthTest: false, transparent: true });
+            particleSystem = new THREE.Points(geo, mat); treeGroup.add(particleSystem);
+        }
+
+        function createTopObject() {
+            const s=new THREE.Shape(); const p=5; for(let i=0;i<p*2;i++){ const r=(i%2===0)?4:2; const a=i/p*Math.PI; s.lineTo(Math.cos(a)*r,Math.sin(a)*r); }
+            const g=new THREE.ExtrudeGeometry(s,{depth:1,bevelEnabled:true,bevelThickness:0.5,bevelSize:0.2});
+            topDecoration=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xffdd00}));
+            topDecoration.position.y = state.treeHeight; treeGroup.add(topDecoration);
+        }
+
+        function createSnow() {
+            const g=new THREE.BufferGeometry(); const pos=[]; for(let i=0;i<1000;i++) pos.push((Math.random()-0.5)*200,Math.random()*150,(Math.random()-0.5)*200);
+            g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+            window.snowSystem=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:0.6,transparent:true,opacity:0.6}));
+            scene.add(window.snowSystem);
+        }
+
+        function updatePhotos() {
+            if(!treeGroup) return; // 还没初始化
+            photoMeshes.forEach(m => treeGroup.remove(m)); photoMeshes = [];
+            if(loadedImages.length === 0) return;
+            
+            loadedImages.forEach((img, idx) => {
+                const cvs = document.createElement('canvas'); cvs.width=256; cvs.height=276; const ctx = cvs.getContext('2d'); 
+                ctx.beginPath(); ctx.moveTo(128, 0); ctx.lineTo(128, 20); ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.stroke();
+                ctx.save(); ctx.beginPath(); ctx.arc(128,148,120,0,Math.PI*2); ctx.clip(); 
+                const asp = img.width/img.height;
+                if(asp>1) ctx.drawImage(img, (img.width-img.height)/2, 0, img.height, img.height, 0,20,256,256); 
+                else ctx.drawImage(img, 0, (img.height-img.width)/2, img.width, img.width, 0,20,256,256);
+                ctx.restore();
+                ctx.beginPath(); ctx.arc(128,148,120,0,Math.PI*2); ctx.lineWidth=10; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+                
+                const mesh = new THREE.Mesh(
+                    new THREE.PlaneGeometry(4, 4.4), 
+                    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cvs), side: THREE.DoubleSide, transparent:true, opacity: 0 }) 
+                );
+                
+                const h = state.treeHeight;
+                const ratio = idx / (loadedImages.length > 1 ? loadedImages.length - 1 : 1);
+                const yPos = -10 + ratio * (h * 0.9); 
+                const origin = new THREE.Vector3(0, yPos, 0);
+
+                const maxRadius = 40; const minRadius = 5;
+                const radius = maxRadius * (1 - ratio) + minRadius;
+                const angle = idx * 2.4; 
+                const targetX = Math.cos(angle) * radius;
+                const targetZ = Math.sin(angle) * radius;
+                const jitterY = (Math.random() - 0.5) * 5;
+                const explodePos = new THREE.Vector3(targetX, yPos + jitterY, targetZ);
+
+                mesh.position.copy(origin);
+                mesh.userData = { origin: origin, explodePos: explodePos };
+                treeGroup.add(mesh); photoMeshes.push(mesh);
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate); 
+            const t = clock.getElapsedTime();
+            let beat = 0; if(analyser) { analyser.getByteFrequencyData(dataArray); let sum = 0; for(let i=0; i<15; i++) sum+=dataArray[i]; beat = (sum/15/255) * 1.5; }
+            
+            if(state.uniforms) { 
+                state.uniforms.uTime.value = t; state.uniforms.uBeat.value = beat; 
+                state.explosion += (state.targetExplosion - state.explosion) * state.explosionDecay; 
+                state.uniforms.uExplosion.value = state.explosion; 
+            }
+
+            const exp = state.explosion; 
+            const ease = 1.0 - Math.pow(1.0 - exp, 3.0); 
+            photoMeshes.forEach(p => {
+                p.position.lerpVectors(p.userData.origin, p.userData.explodePos, ease);
+                p.material.opacity = THREE.MathUtils.smoothstep(exp, 0.05, 0.3);
+                p.lookAt(camera.position);
+                if (exp > 0.5) { const scale = 1.0 + beat * 0.1; p.scale.set(scale, scale, scale); }
+            });
+
+            treeGroup.rotation.y += state.rotVelocity.y; treeGroup.rotation.x += state.rotVelocity.x;
+            state.rotVelocity.x *= state.inertia; state.rotVelocity.y *= state.inertia;
+            if (Math.abs(state.rotVelocity.y) < 0.001) { treeGroup.rotation.y += state.rotationSpeed; treeGroup.rotation.x *= 0.95; }
+
+            if(topDecoration) { topDecoration.rotation.y -= 0.02; const s = 1 + beat * 0.3; topDecoration.scale.set(s,s,s); }
+
+            if(window.snowSystem) {
+                const pos = window.snowSystem.geometry.attributes.position.array;
+                for(let i=0; i<pos.length; i+=3) {
+                    pos[i+1] -= 0.3; pos[i] += Math.sin(t * 0.5 + pos[i+1] * 0.05) * 0.1;
+                    if(pos[i+1] < -20) { pos[i+1] = 100; pos[i] = (Math.random()-0.5)*200; }
+                }
+                window.snowSystem.geometry.attributes.position.needsUpdate = true;
+            }
+            renderer.render(scene, camera);
+        }
+
+        // === 手势 ===
+        function startHandTracking() {
+            const video = document.getElementById('input_video');
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            
+            hands.onResults(results => {
+                if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                    state.lastHandPos = { x: null, y: null }; state.targetExplosion = 0; return; 
+                }
+                const lm = results.multiHandLandmarks[0];
+                const pinchDist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+                if (pinchDist < 0.05) { 
+                    if (!state.photoActive) { showRandomPhoto(); state.photoActive = true; }
+                } else if (pinchDist > 0.08) {
+                    if (state.photoActive) { document.getElementById('photo-modal').classList.remove('active'); state.photoActive = false; }
+                }
+                const handSize = Math.hypot(lm[0].x - lm[9].x, lm[0].y - lm[9].y);
+                const tips = [12, 16, 20]; let totalTipDist = 0;
+                tips.forEach(idx => { totalTipDist += Math.hypot(lm[0].x - lm[idx].x, lm[0].y - lm[idx].y); });
+                const avgRatio = (totalTipDist / 3) / handSize;
+                state.targetExplosion = Math.min(Math.max((avgRatio - 1.2) * 2.0, 0), 1);
+
+                if (state.enableGestureRot) {
+                    const handCenter = lm[9]; 
+                    if (state.lastHandPos.x !== null) {
+                        const deltaX = handCenter.x - state.lastHandPos.x;
+                        const deltaY = handCenter.y - state.lastHandPos.y;
+                        if (Math.abs(deltaX) > 0.002 || Math.abs(deltaY) > 0.002) {
+                            state.rotVelocity.y = -deltaX * state.gestureSensitivity; 
+                            state.rotVelocity.x = deltaY * state.gestureSensitivity; 
+                        }
+                    }
+                    state.lastHandPos = { x: handCenter.x, y: handCenter.y };
+                }
+            });
+            const cameraUtils = new Camera(video, { onFrame: async () => { await hands.send({image: video}); }, width: 320, height: 240 });
+            cameraUtils.start();
+        }
+
+        function showRandomPhoto() {
+            if(loadedImages.length === 0) return;
+            const img = loadedImages[Math.floor(Math.random() * loadedImages.length)];
+            const modal = document.getElementById('photo-modal');
+            document.getElementById('modal-img').src = img.src;
+            modal.classList.add('active');
+        }
+
+        function setupUI() {
+            document.getElementById('toggle-btn').addEventListener('click', () => { document.getElementById('ui-panel').classList.toggle('hidden'); });
+            document.getElementById('btn-fullscreen').addEventListener('click', () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); });
+            document.getElementById('btn-toggle-cam').addEventListener('click', () => { document.getElementById('input_video').classList.toggle('hidden-cam'); });
+            document.getElementById('music-input').addEventListener('change', (e) => {
+                const file = e.target.files[0]; if(file) { audioEl.src = URL.createObjectURL(file); audioEl.play(); document.getElementById('btn-play-pause').innerText = "⏸ 暂停"; }
+            });
+            document.getElementById('btn-play-pause').addEventListener('click', (e) => { if(audioEl.paused) { audioEl.play(); e.target.innerText = "⏸ 暂停"; } else { audioEl.pause(); e.target.innerText = "▶ 播放"; } });
+            document.getElementById('btn-record').addEventListener('click', toggleRecording);
+            document.getElementById('param-sensitivity').addEventListener('input', (e) => { state.gestureSensitivity = parseFloat(e.target.value); document.getElementById('val-sensitivity').innerText = state.gestureSensitivity.toFixed(1); });
+        }
+
+        function toggleRecording() {
+            const btn = document.getElementById('btn-record');
+            if (btn.classList.contains('recording')) { mediaRecorder.stop(); btn.classList.remove('recording'); btn.innerText = "🔴 录制视频给TA"; } 
+            else {
+                recordedChunks = [];
+                const canvasStream = renderer.domElement.captureStream(30);
+                let finalStream = canvasStream;
+                if (audioStreamDest) { const audioTrack = audioStreamDest.stream.getAudioTracks()[0]; if (audioTrack) finalStream.addTrack(audioTrack); }
+                const options = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? { mimeType: 'video/webm;codecs=vp9' } : { mimeType: 'video/webm' };
+                mediaRecorder = new MediaRecorder(finalStream, options);
+                mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) recordedChunks.push(event.data); };
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' }); const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.style.display = 'none'; a.href = url; a.download = `Christmas_Magic_${new Date().getTime()}.webm`;
+                    document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+                };
+                mediaRecorder.start(); btn.classList.add('recording'); btn.innerText = "⏹ 停止并保存";
+            }
+        }
+    </script>
+</body>
+</html>
